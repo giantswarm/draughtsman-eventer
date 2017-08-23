@@ -44,7 +44,7 @@ func TestFilterDeploymentsByEnvironment(t *testing.T) {
 	}
 
 	for index, test := range tests {
-		e := GithubEventer{
+		e := Eventer{
 			environment: test.environment,
 		}
 
@@ -141,7 +141,7 @@ func TestFilterDeploymentsByStatus(t *testing.T) {
 	}
 
 	for index, test := range tests {
-		e := GithubEventer{}
+		e := Eventer{}
 
 		returnedDeployments := e.filterDeploymentsByStatus(test.deployments)
 
