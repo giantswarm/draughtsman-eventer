@@ -128,6 +128,7 @@ func New(config Config) (*Service, error) {
 		eventerConfig := eventer.DefaultConfig()
 
 		eventerConfig.HTTPClient = httpClient
+		eventerConfig.K8sClient = k8sClient
 		eventerConfig.Logger = config.Logger
 
 		eventerConfig.Flag = config.Flag

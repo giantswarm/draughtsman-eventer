@@ -1,7 +1,6 @@
 package github
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,6 +24,11 @@ const (
 	// etagHeader is the header used for etag.
 	// See: https://en.wikipedia.org/wiki/HTTP_ETag.
 	etagHeader = "Etag"
+
+	// LatestDeploymentUrlFormat is the format string used to compute the Github
+	// API URL used to fetch the latest deployment event for a specific
+	// environment.
+	LatestDeploymentUrlFormat = "https://api.github.com/repos/%s/%s/deployments?environment=%s"
 )
 
 // request makes a request, handling any metrics and logging.
@@ -80,6 +84,78 @@ func (e *Eventer) filterDeploymentsByStatus(deployments []deployment) []deployme
 	}
 
 	return matches
+}
+
+func (e *Eventer) fetchLatestDeploymentEvent(project, environment string) (deployment, error) {
+	e.logger.Log("debug", "fetching latest deployment", "project", project)
+
+	var err error
+
+	var req *http.Request
+	{
+		u := fmt.Sprintf(
+			LatestDeploymentUrlFormat,
+			e.organisation,
+			project,
+			environment,
+		)
+
+		req, err = http.NewRequest("GET", u, nil)
+		if err != nil {
+			return deployment{}, microerror.Mask(err)
+		}
+	}
+
+	var res *http.Response
+	{
+		startTime := time.Now()
+
+		res, err := e.request(req)
+		if err != nil {
+			return deployment{}, microerror.Mask(err)
+		}
+		defer res.Body.Close()
+
+		updateDeploymentMetrics(e.organisation, project, res.StatusCode, startTime)
+
+		if res.StatusCode != http.StatusOK {
+			return deployment{}, microerror.Maskf(unexpectedStatusCode, fmt.Sprintf("received non-%d status code: %d", http.StatusOK, res.StatusCode))
+		}
+	}
+
+	var d deployment
+	{
+		bytes, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return deployment{}, microerror.Mask(err)
+		}
+
+		var deployments []deployment
+		if err := json.Unmarshal(bytes, &deployments); err != nil {
+			return deployment{}, microerror.Mask(err)
+		}
+
+		deployments = e.filterDeploymentsByEnvironment(deployments)
+
+		for i, depl := range deployments {
+			deploymentStatuses, err := e.fetchDeploymentStatus(project, depl)
+			if err != nil {
+				return deployment{}, microerror.Mask(err)
+			}
+
+			deployments[i].Statuses = deploymentStatuses
+		}
+
+		deployments = e.filterDeploymentsByStatus(deployments)
+
+		if len(deployments) == 0 {
+			return deployment{}, microerror.Mask(notFoundError)
+		}
+
+		d = deployments[0]
+	}
+
+	return d, nil
 }
 
 // fetchNewDeploymentEvents fetches any new GitHub Deployment Events for the
@@ -196,46 +272,4 @@ func (e *Eventer) fetchDeploymentStatus(project string, deployment deployment) (
 	}
 
 	return deploymentStatuses, nil
-}
-
-// postDeploymentStatus posts a Deployment Status for the given Deployment.
-func (e *Eventer) postDeploymentStatus(project string, id int, state deploymentStatusState) error {
-	e.logger.Log("debug", "posting deployment status", "project", project, "id", id, "state", state)
-
-	url := fmt.Sprintf(
-		deploymentStatusUrlFormat,
-		e.organisation,
-		project,
-		id,
-	)
-
-	status := deploymentStatus{
-		State: state,
-	}
-
-	payload, err := json.Marshal(status)
-	if err != nil {
-		return microerror.Mask(err)
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
-	if err != nil {
-		return microerror.Mask(err)
-	}
-
-	startTime := time.Now()
-
-	resp, err := e.request(req)
-	if err != nil {
-		return microerror.Mask(err)
-	}
-	defer resp.Body.Close()
-
-	updateDeploymentStatusMetrics("POST", e.organisation, project, resp.StatusCode, startTime)
-
-	if resp.StatusCode != http.StatusCreated {
-		return microerror.Maskf(unexpectedStatusCode, fmt.Sprintf("received non-200 status code: %v", resp.StatusCode))
-	}
-
-	return nil
 }

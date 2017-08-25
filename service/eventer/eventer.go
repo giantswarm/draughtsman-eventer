@@ -3,6 +3,8 @@ package eventer
 import (
 	"strings"
 
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/spf13/viper"
 
 	"github.com/giantswarm/microerror"
@@ -19,6 +21,7 @@ import (
 type Config struct {
 	// Dependencies.
 	HTTPClient httpspec.Client
+	K8sClient  kubernetes.Interface
 	Logger     micrologger.Logger
 
 	// Settings.
@@ -32,6 +35,7 @@ func DefaultConfig() Config {
 	return Config{
 		// Dependencies.
 		HTTPClient: nil,
+		K8sClient:  nil,
 		Logger:     nil,
 
 		// Settings.
@@ -59,6 +63,7 @@ func New(config Config) (spec.Eventer, error) {
 		githubConfig := github.DefaultConfig()
 
 		githubConfig.HTTPClient = config.HTTPClient
+		githubConfig.K8sClient = config.K8sClient
 		githubConfig.Logger = config.Logger
 
 		githubConfig.Environment = config.Viper.GetString(config.Flag.Service.Eventer.Environment)

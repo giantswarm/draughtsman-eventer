@@ -1,27 +1,12 @@
-hash: e48d2c0b7703552b4b60d075578d79aa42898f77b180a8664114a8e4936bc78a
-updated: 2017-08-22T10:45:56.798735404+02:00
+hash: ba83c2f843869e91f82ce9f30590c0ab0bd5b3bdf00fb014cf2ceabe56fc5180
+updated: 2017-08-24T17:21:49.484617549+02:00
 imports:
 - name: github.com/beorn7/perks
   version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
-- name: github.com/coreos/etcd
-  version: 61fc123e7a8b14a0a258aa3f5c4159861b1ec2e7
-  subpackages:
-  - auth/authpb
-  - client
-  - clientv3
-  - etcdserver/api/v3rpc/rpctypes
-  - etcdserver/etcdserverpb
-  - mvcc/mvccpb
-  - pkg/pathutil
-  - pkg/srv
-  - pkg/types
-  - version
-- name: github.com/coreos/go-semver
-  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
-  subpackages:
-  - semver
+- name: github.com/cenkalti/backoff
+  version: 32cd0c5b3aef12c76ed64aaf678f6c79736be7dc
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
@@ -40,6 +25,10 @@ imports:
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
+- name: github.com/giantswarm/draughtsmantpr
+  version: 4ce74fde71c87c09aa673e4942d14e6e82e6ff0f
+  subpackages:
+  - spec
 - name: github.com/giantswarm/microendpoint
   version: 70547070da4072138bb5161e80a164b0bac075cc
   subpackages:
@@ -51,7 +40,7 @@ imports:
 - name: github.com/giantswarm/microerror
   version: 5ade94eb4ee35ef72eb9382228470caeddb29989
 - name: github.com/giantswarm/microkit
-  version: 25d2ae70c7f70bbfc1bbab7592dd1fafe14d2910
+  version: 9c50baa91bd1639e41bc5510b215d9d0801f94ca
   subpackages:
   - command
   - command/daemon
@@ -63,20 +52,19 @@ imports:
   - command/version
   - flag
   - server
-  - storage
-  - storage/etcd
-  - storage/etcdv2
-  - storage/memory
   - tls
   - transaction
   - transaction/context/id
   - transaction/context/tracked
 - name: github.com/giantswarm/micrologger
   version: 8a69b2ab80ba2d0bd40d609206518fefacfc8fdf
+- name: github.com/giantswarm/microstorage
+  version: f5c68d40459f0021cf8266501b7d8615ea4ff641
 - name: github.com/giantswarm/operatorkit
   version: 7f7b7fea307a52987696f78b6c6ec1b86ab756db
   subpackages:
   - client/k8s
+  - tpr
 - name: github.com/go-kit/kit
   version: a9ca6725cbbea455e61c6bc8a1ed28e81eb3493b
   subpackages:
@@ -94,7 +82,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/go-stack/stack
-  version: 54be5f394ed2c3e19dac9134a40a95ba5a017f7b
+  version: 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
 - name: github.com/gogo/protobuf
   version: e18d7aa8f8c624c915db340349aad4c49b10d173
   subpackages:
@@ -177,7 +165,7 @@ imports:
 - name: github.com/spf13/cast
   version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/cobra
-  version: 4a7b7e65864c064d48dce82efbbfed2bdc0bf2aa
+  version: 2df9a531813370438a4d79bfc33e21f58063ed87
 - name: github.com/spf13/jwalterweatherman
   version: 0efa5202c04663c757d84f90f5219c1250baf94f
 - name: github.com/spf13/pflag
@@ -198,18 +186,15 @@ imports:
   - http2
   - http2/hpack
   - idna
-  - internal/timeseries
   - lex/httplex
-  - trace
 - name: golang.org/x/sys
   version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 4ee4af566555f5fbe026368b75596286a312663a
+  version: 2910a502d2bf9e43193af9d68ca516529614eed3
   subpackages:
   - cases
-  - internal
   - internal/tag
   - language
   - runes
@@ -219,20 +204,6 @@ imports:
   - unicode/bidi
   - unicode/norm
   - width
-- name: google.golang.org/grpc
-  version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
-  subpackages:
-  - codes
-  - credentials
-  - grpclog
-  - internal
-  - keepalive
-  - metadata
-  - naming
-  - peer
-  - stats
-  - tap
-  - transport
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
@@ -240,7 +211,6 @@ imports:
 - name: k8s.io/apimachinery
   version: 85ace5365f33b16fc735c866a12e3c765b9700f2
   subpackages:
-  - pkg/api/equality
   - pkg/api/errors
   - pkg/api/meta
   - pkg/api/resource
@@ -267,22 +237,18 @@ imports:
   - pkg/util/diff
   - pkg/util/errors
   - pkg/util/framer
-  - pkg/util/httpstream
   - pkg/util/intstr
   - pkg/util/json
-  - pkg/util/mergepatch
   - pkg/util/net
   - pkg/util/rand
   - pkg/util/runtime
   - pkg/util/sets
-  - pkg/util/strategicpatch
   - pkg/util/validation
   - pkg/util/validation/field
   - pkg/util/wait
   - pkg/util/yaml
   - pkg/version
   - pkg/watch
-  - third_party/forked/golang/json
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
   version: 21300e3e11c918b8e6a70fb7293b310683d6c046
@@ -355,6 +321,7 @@ imports:
   - pkg/version
   - rest
   - rest/watch
+  - tools/cache
   - tools/clientcmd/api
   - tools/metrics
   - transport

@@ -10,5 +10,9 @@ import:
   version: master
 - package: github.com/giantswarm/operatorkit
   version: master
+- package: github.com/giantswarm/draughtsmantpr
+  version: master
 - package: github.com/prometheus/client_golang
   version: ~0.8.0
+- package: github.com/giantswarm/microstorage
+  version: f5c68d40459f0021cf8266501b7d8615ea4ff641
