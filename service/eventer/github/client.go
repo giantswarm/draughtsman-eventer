@@ -11,11 +11,6 @@ import (
 )
 
 const (
-	// deploymentUrlFormat is the string format for the GitHub
-	// API call for Deployments.
-	// See: https://developer.github.com/v3/repos/deployments/#list-deployments
-	deploymentUrlFormat = "https://api.github.com/repos/%s/%s/deployments"
-
 	// deploymentStatusUrlFormat is the string format for the
 	// GitHub API call for Deployment Statuses.
 	// See: https://developer.github.com/v3/repos/deployments/#create-a-deployment-status
@@ -25,10 +20,10 @@ const (
 	// See: https://en.wikipedia.org/wiki/HTTP_ETag.
 	etagHeader = "Etag"
 
-	// LatestDeploymentUrlFormat is the format string used to compute the Github
+	// DeploymentUrlFormat is the format string used to compute the Github
 	// API URL used to fetch the latest deployment event for a specific
 	// environment.
-	LatestDeploymentUrlFormat = "https://api.github.com/repos/%s/%s/deployments?environment=%s"
+	DeploymentUrlFormat = "https://api.github.com/repos/%s/%s/deployments?environment=%s"
 )
 
 // request makes a request, handling any metrics and logging.
@@ -46,20 +41,6 @@ func (e *Eventer) request(req *http.Request) (*http.Response, error) {
 	}
 
 	return resp, err
-}
-
-// filterDeploymentsByEnvironment filters out deployments that do not apply
-// to this environment.
-func (e *Eventer) filterDeploymentsByEnvironment(deployments []deployment) []deployment {
-	matches := []deployment{}
-
-	for _, deployment := range deployments {
-		if deployment.Environment == e.environment {
-			matches = append(matches, deployment)
-		}
-	}
-
-	return matches
 }
 
 // filterDeploymentsByStatus filters out deployments that are finished -
@@ -86,87 +67,16 @@ func (e *Eventer) filterDeploymentsByStatus(deployments []deployment) []deployme
 	return matches
 }
 
-func (e *Eventer) fetchLatestDeploymentEvent(project, environment string) (deployment, error) {
-	e.logger.Log("debug", "fetching latest deployment", "project", project)
-
-	var err error
-
-	var req *http.Request
-	{
-		u := fmt.Sprintf(
-			LatestDeploymentUrlFormat,
-			e.organisation,
-			project,
-			environment,
-		)
-
-		req, err = http.NewRequest("GET", u, nil)
-		if err != nil {
-			return deployment{}, microerror.Mask(err)
-		}
-	}
-
-	var res *http.Response
-	{
-		startTime := time.Now()
-
-		res, err := e.request(req)
-		if err != nil {
-			return deployment{}, microerror.Mask(err)
-		}
-		defer res.Body.Close()
-
-		updateDeploymentMetrics(e.organisation, project, res.StatusCode, startTime)
-
-		if res.StatusCode != http.StatusOK {
-			return deployment{}, microerror.Maskf(unexpectedStatusCode, fmt.Sprintf("received non-%d status code: %d", http.StatusOK, res.StatusCode))
-		}
-	}
-
-	var d deployment
-	{
-		bytes, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return deployment{}, microerror.Mask(err)
-		}
-
-		var deployments []deployment
-		if err := json.Unmarshal(bytes, &deployments); err != nil {
-			return deployment{}, microerror.Mask(err)
-		}
-
-		deployments = e.filterDeploymentsByEnvironment(deployments)
-
-		for i, depl := range deployments {
-			deploymentStatuses, err := e.fetchDeploymentStatus(project, depl)
-			if err != nil {
-				return deployment{}, microerror.Mask(err)
-			}
-
-			deployments[i].Statuses = deploymentStatuses
-		}
-
-		deployments = e.filterDeploymentsByStatus(deployments)
-
-		if len(deployments) == 0 {
-			return deployment{}, microerror.Mask(notFoundError)
-		}
-
-		d = deployments[0]
-	}
-
-	return d, nil
-}
-
 // fetchNewDeploymentEvents fetches any new GitHub Deployment Events for the
 // given project.
-func (e *Eventer) fetchNewDeploymentEvents(project string, etagMap map[string]string) ([]deployment, error) {
+func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string) ([]deployment, error) {
 	e.logger.Log("debug", "fetching deployments", "project", project)
 
 	url := fmt.Sprintf(
-		deploymentUrlFormat,
+		DeploymentUrlFormat,
 		e.organisation,
 		project,
+		environment,
 	)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -212,8 +122,6 @@ func (e *Eventer) fetchNewDeploymentEvents(project string, etagMap map[string]st
 	if err := json.Unmarshal(bytes, &deployments); err != nil {
 		return nil, microerror.Mask(err)
 	}
-
-	deployments = e.filterDeploymentsByEnvironment(deployments)
 
 	for index, deployment := range deployments {
 		deploymentStatuses, err := e.fetchDeploymentStatus(project, deployment)

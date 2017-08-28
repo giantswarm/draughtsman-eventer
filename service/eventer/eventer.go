@@ -1,8 +1,6 @@
 package eventer
 
 import (
-	"strings"
-
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/spf13/viper"
@@ -63,14 +61,11 @@ func New(config Config) (spec.Eventer, error) {
 		githubConfig := github.DefaultConfig()
 
 		githubConfig.HTTPClient = config.HTTPClient
-		githubConfig.K8sClient = config.K8sClient
 		githubConfig.Logger = config.Logger
 
-		githubConfig.Environment = config.Viper.GetString(config.Flag.Service.Eventer.Environment)
 		githubConfig.OAuthToken = config.Viper.GetString(config.Flag.Service.Eventer.GitHub.OAuthToken)
 		githubConfig.Organisation = config.Viper.GetString(config.Flag.Service.Eventer.GitHub.Organisation)
 		githubConfig.PollInterval = config.Viper.GetDuration(config.Flag.Service.Eventer.GitHub.PollInterval)
-		githubConfig.ProjectList = strings.Split(config.Viper.GetString(config.Flag.Service.Eventer.GitHub.ProjectList), ",")
 
 		newEventer, err = github.New(githubConfig)
 		if err != nil {

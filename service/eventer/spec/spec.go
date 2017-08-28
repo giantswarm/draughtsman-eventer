@@ -5,14 +5,13 @@ type EventerType string
 
 // Eventer represents a Service that checks for deployment events.
 type Eventer interface {
-	// Boot initializes the eventer and makes it run. The eventer decides if the
-	// TPO it watches should be initialized and/or updated using
-	// NewDeploymentEvents.
-	Boot()
-	// NewDeploymentEvents returns a channel of DeploymentEvents. This channel can
-	// be ranged over to receive DeploymentEvents as they come in. In case of
+	// FetchContinuously returns a channel of DeploymentEvents. This channel can
+	// be ranged over to receive DeploymentEvents as they come in. In case of an
 	// error during setup, the error will be non-nil.
-	NewDeploymentEvents() (<-chan DeploymentEvent, error)
+	FetchContinuously(projects []string, environment string) (<-chan DeploymentEvent, error)
+	// FetchLatest returns the latest DeploymentEvent for the given project in the
+	// given environment.
+	FetchLatest(project, environment string) (DeploymentEvent, error)
 }
 
 // DeploymentEvent represents a request for a chart to be deployed.

@@ -5,6 +5,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/giantswarm/microendpoint/service/version"
@@ -18,6 +19,8 @@ import (
 	"github.com/giantswarm/draughtsman-eventer/service/eventer"
 	eventerspec "github.com/giantswarm/draughtsman-eventer/service/eventer/spec"
 	"github.com/giantswarm/draughtsman-eventer/service/healthz"
+	"github.com/giantswarm/draughtsman-eventer/service/informer"
+	"github.com/giantswarm/draughtsman-eventer/service/tpo"
 )
 
 // Config represents the configuration used to create a new service.
@@ -55,9 +58,9 @@ func DefaultConfig() Config {
 
 type Service struct {
 	// Dependencies.
-	Eventer eventerspec.Eventer
-	Healthz *healthz.Service
-	Version *version.Service
+	Healthz  *healthz.Service
+	Informer *informer.Service
+	Version  *version.Service
 
 	// Internals.
 	bootOnce sync.Once
@@ -140,6 +143,36 @@ func New(config Config) (*Service, error) {
 		}
 	}
 
+	var tpoService *tpo.Service
+	{
+		tpoConfig := tpo.DefaultConfig()
+
+		tpoConfig.K8sClient = k8sClient
+		tpoConfig.Logger = config.Logger
+
+		tpoService, err = tpo.New(tpoConfig)
+		if err != nil {
+			return nil, microerror.Mask(err)
+		}
+	}
+
+	var informerService *informer.Service
+	{
+		informerConfig := informer.DefaultConfig()
+
+		informerConfig.Eventer = eventerService
+		informerConfig.Logger = config.Logger
+		informerConfig.TPO = tpoService
+
+		informerConfig.Environment = config.Viper.GetString(config.Flag.Service.Eventer.Environment)
+		informerConfig.Projects = strings.Split(config.Viper.GetString(config.Flag.Service.Eventer.GitHub.ProjectList), ",")
+
+		informerService, err = informer.New(informerConfig)
+		if err != nil {
+			return nil, microerror.Mask(err)
+		}
+	}
+
 	var versionService *version.Service
 	{
 		versionConfig := version.DefaultConfig()
@@ -157,9 +190,9 @@ func New(config Config) (*Service, error) {
 
 	newService := &Service{
 		// Dependencies.
-		Eventer: eventerService,
-		Healthz: healthzService,
-		Version: versionService,
+		Healthz:  healthzService,
+		Informer: informerService,
+		Version:  versionService,
 
 		// Internals
 		bootOnce: sync.Once{},
@@ -170,6 +203,6 @@ func New(config Config) (*Service, error) {
 
 func (s *Service) Boot() {
 	s.bootOnce.Do(func() {
-		s.Eventer.Boot()
+		s.Informer.Boot()
 	})
 }
