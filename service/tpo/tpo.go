@@ -11,11 +11,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var (
+const (
 	// TODO make TPO namespace configurable in separate PR.
 	DefaultNamespace = "default"
-	// TPOName is the name of the TPO the eventer watches.
-	TPOName = "draughtsman-tpo"
+	// Name is the name of the TPO the eventer watches.
+	Name = "draughtsman-tpo"
 )
 
 // Config represents the configuration used to create a TPO service.
@@ -86,7 +86,7 @@ func New(config Config) (*Service, error) {
 }
 
 func (s *Service) Ensure(tpo draughtsmantpr.CustomObject) error {
-	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + TPOName
+	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + Name
 	_, err := s.k8sClient.Core().RESTClient().Post().Body(tpo).AbsPath(endpoint).DoRaw()
 	if apierrors.IsNotFound(err) {
 		return microerror.Mask(notFoundError)
@@ -105,7 +105,7 @@ func (s *Service) Ensure(tpo draughtsmantpr.CustomObject) error {
 }
 
 func (s *Service) Get() (draughtsmantpr.CustomObject, error) {
-	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + TPOName
+	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + Name
 
 	b, err := s.k8sClient.Core().RESTClient().Get().AbsPath(endpoint).DoRaw()
 	if apierrors.IsNotFound(err) {

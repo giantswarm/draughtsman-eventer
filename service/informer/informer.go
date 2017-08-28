@@ -198,12 +198,12 @@ func containsEmptyItems(projects []string) bool {
 
 func ensureProject(projects []draughtsmantprspec.Project, project draughtsmantprspec.Project) []draughtsmantprspec.Project {
 	var updated bool
-	for _, p := range projects {
+	for i, p := range projects {
 		if p.Name != project.Name {
 			continue
 		}
 
-		p.Ref = project.Ref
+		projects[i].Ref = project.Ref
 		updated = true
 	}
 

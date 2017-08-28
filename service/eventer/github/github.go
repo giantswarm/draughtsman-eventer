@@ -111,15 +111,18 @@ func (e *Eventer) FetchContinuously(projects []string, environment string) (<-ch
 		// TODO this map just grows which means we fill the programm with memory.
 		etagMap := make(map[string]string)
 
-		for c := ticker.C; ; <-c {
-			for _, p := range projects {
-				deployments, err := e.fetchNewDeploymentEvents(p, environment, etagMap)
-				if err != nil {
-					e.logger.Log("error", "could not fetch deployment events", "message", err.Error())
-				}
+		for {
+			select {
+			case <-ticker.C:
+				for _, p := range projects {
+					deployments, err := e.fetchNewDeploymentEvents(p, environment, etagMap)
+					if err != nil {
+						e.logger.Log("error", "could not fetch deployment events", "message", err.Error())
+					}
 
-				for _, d := range deployments {
-					deploymentEventChannel <- d.DeploymentEvent(p)
+					for _, d := range deployments {
+						deploymentEventChannel <- d.DeploymentEvent(p)
+					}
 				}
 			}
 		}

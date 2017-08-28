@@ -13,7 +13,9 @@ func IsInvalidConfig(err error) bool {
 	return microerror.Cause(err) == invalidConfigError
 }
 
+var NotFoundError = microerror.New("not found")
+
 // IsNotFound asserts not found errors of eventer implementations.
 func IsNotFound(err error) bool {
-	return github.IsNotFound(err)
+	return microerror.Cause(err) == NotFoundError || github.IsNotFound(err)
 }
