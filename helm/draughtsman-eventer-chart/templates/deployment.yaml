@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: draughtsman-eventer
-  namespace: draughtsman-eventer
+  namespace: draughtsman
   labels:
     app: draughtsman-eventer
 spec:
