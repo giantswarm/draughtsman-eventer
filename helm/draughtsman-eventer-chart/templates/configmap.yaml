@@ -10,8 +10,8 @@ data:
         address: 'http://0.0.0.0:8000'
     service:
       eventer:
+        environment: '{{ .Values.Installation.V1.GiantSwarm.DraughtsmanEventer.Eventer.Environment }}'
         github:
-          environment: '{{ .Values.Installation.V1.GiantSwarm.DraughtsmanEventer.Eventer.Environment }}'
           organisation: '{{ .Values.Installation.V1.GiantSwarm.DraughtsmanEventer.Eventer.Organisation }}'
           projects: '{{ .Values.Installation.V1.GiantSwarm.DraughtsmanEventer.Eventer.Projects }}'
       kubernetes:
