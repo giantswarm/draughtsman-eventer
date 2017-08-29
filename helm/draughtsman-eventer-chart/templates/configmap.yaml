@@ -11,8 +11,8 @@ data:
     service:
       eventer:
         github:
-          environment: '{{ .Values.Installation.V1.Giantswarm.DraughtsmanEventer.Eventer.Github.Environment }}'
-          organisation: '{{ .Values.Installation.V1.Giantswarm.DraughtsmanEventer.Eventer.Github.Organisation }}'
-          projects: '{{ .Values.Installation.V1.Giantswarm.DraughtsmanEventer.Eventer.Github.Projects }}'
+          environment: '{{ .Values.Installation.V1.GiantSwarm.DraughtsmanEventer.Eventer.Github.Environment }}'
+          organisation: '{{ .Values.Installation.V1.GiantSwarm.DraughtsmanEventer.Eventer.Github.Organisation }}'
+          projects: '{{ .Values.Installation.V1.GiantSwarm.DraughtsmanEventer.Eventer.Github.Projects }}'
       kubernetes:
         incluster: true
