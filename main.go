@@ -114,7 +114,7 @@ func mainWithError() error {
 	daemonCommand.PersistentFlags().String(f.Service.Eventer.GitHub.OAuthToken, "", "OAuth token for authenticating against GitHub. Needs 'repo_deployment' scope.")
 	daemonCommand.PersistentFlags().String(f.Service.Eventer.GitHub.Organisation, "", "Organisation under which to check for deployments.")
 	daemonCommand.PersistentFlags().Duration(f.Service.Eventer.GitHub.PollInterval, 1*time.Minute, "Interval to poll for new deployments.")
-	daemonCommand.PersistentFlags().String(f.Service.Eventer.GitHub.ProjectList, "", "Comma seperated list of GitHub projects to check for deployments.")
+	daemonCommand.PersistentFlags().String(f.Service.Eventer.GitHub.Projects, "", "Comma seperated list of GitHub projects to check for deployments.")
 	daemonCommand.PersistentFlags().String(f.Service.Eventer.Type, string(github.GithubEventerType), "Which eventer to use for event management.")
 
 	daemonCommand.PersistentFlags().Duration(f.Service.HTTPClient.Timeout, 10*time.Second, "Timeout for HTTP requests.")

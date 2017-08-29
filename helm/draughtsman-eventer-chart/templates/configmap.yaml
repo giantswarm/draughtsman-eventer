@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: draughtsman-eventer
+  namespace: draughtsman-eventer
+data:
+  config.yaml: |
+    server:
+      listen:
+        address: 'http://0.0.0.0:8000'
+    service:
+      eventer:
+        github:
+          environment: '{{ .Values.Installation.V1.DraughtsmanEventer.Eventer.Github.Environment }}'
+          organisation: '{{ .Values.Installation.V1.DraughtsmanEventer.Eventer.Github.Organisation }}'
+          projects: '{{ .Values.Installation.V1.DraughtsmanEventer.Eventer.Github.Projects }}'

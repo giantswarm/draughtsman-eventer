@@ -34,7 +34,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 			Eventer: &testEventer{
 				ContinuousEvents: nil,
 				LatestEvents: map[string]eventerspec.DeploymentEvent{
-					"api-name": eventerspec.DeploymentEvent{
+					"api-name": {
 						ID:   100,
 						Name: "api-name",
 						Sha:  "api-sha-1",
@@ -66,12 +66,12 @@ func Test_Informer_EventManagement(t *testing.T) {
 			Eventer: &testEventer{
 				ContinuousEvents: nil,
 				LatestEvents: map[string]eventerspec.DeploymentEvent{
-					"api-name": eventerspec.DeploymentEvent{
+					"api-name": {
 						ID:   100,
 						Name: "api-name",
 						Sha:  "api-sha-1",
 					},
-					"cluster-service-name": eventerspec.DeploymentEvent{
+					"cluster-service-name": {
 						ID:   101,
 						Name: "cluster-service-name",
 						Sha:  "cluster-service-sha-1",
@@ -107,14 +107,14 @@ func Test_Informer_EventManagement(t *testing.T) {
 		{
 			Eventer: &testEventer{
 				ContinuousEvents: map[string]eventerspec.DeploymentEvent{
-					"api-name": eventerspec.DeploymentEvent{
+					"api-name": {
 						ID:   101,
 						Name: "api-name",
 						Sha:  "api-sha-2",
 					},
 				},
 				LatestEvents: map[string]eventerspec.DeploymentEvent{
-					"api-name": eventerspec.DeploymentEvent{
+					"api-name": {
 						ID:   100,
 						Name: "api-name",
 						Sha:  "api-sha-1",
@@ -146,24 +146,24 @@ func Test_Informer_EventManagement(t *testing.T) {
 		{
 			Eventer: &testEventer{
 				ContinuousEvents: map[string]eventerspec.DeploymentEvent{
-					"api-name": eventerspec.DeploymentEvent{
+					"api-name": {
 						ID:   101,
 						Name: "api-name",
 						Sha:  "api-sha-2",
 					},
-					"cluster-service-name": eventerspec.DeploymentEvent{
+					"cluster-service-name": {
 						ID:   103,
 						Name: "cluster-service-name",
 						Sha:  "cluster-service-sha-2",
 					},
 				},
 				LatestEvents: map[string]eventerspec.DeploymentEvent{
-					"api-name": eventerspec.DeploymentEvent{
+					"api-name": {
 						ID:   100,
 						Name: "api-name",
 						Sha:  "api-sha-1",
 					},
-					"cluster-service-name": eventerspec.DeploymentEvent{
+					"cluster-service-name": {
 						ID:   102,
 						Name: "cluster-service-name",
 						Sha:  "cluster-service-sha-1",

@@ -165,7 +165,7 @@ func New(config Config) (*Service, error) {
 		informerConfig.TPO = tpoService
 
 		informerConfig.Environment = config.Viper.GetString(config.Flag.Service.Eventer.Environment)
-		informerConfig.Projects = strings.Split(config.Viper.GetString(config.Flag.Service.Eventer.GitHub.ProjectList), ",")
+		informerConfig.Projects = strings.Split(config.Viper.GetString(config.Flag.Service.Eventer.GitHub.Projects), ",")
 
 		informerService, err = informer.New(informerConfig)
 		if err != nil {
