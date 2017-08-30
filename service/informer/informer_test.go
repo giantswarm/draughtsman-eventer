@@ -1,11 +1,13 @@
 package informer
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/cenk/backoff"
 	"github.com/giantswarm/draughtsmantpr"
 	"github.com/giantswarm/micrologger/microloggertest"
 
@@ -13,6 +15,92 @@ import (
 	eventerspec "github.com/giantswarm/draughtsman-eventer/service/eventer/spec"
 	draughtsmantprspec "github.com/giantswarm/draughtsmantpr/spec"
 )
+
+func Test_Informer_BackOff_NoRetries(t *testing.T) {
+	environment := "master"
+	projects := []string{
+		"api-name",
+		"cluster-service-name",
+		"kubernetesd-name",
+	}
+
+	var err error
+
+	tpoController := &testTPOController{
+		EnsureCalled: 0,
+		Err:          fmt.Errorf("test error"),
+		GetCalled:    0,
+		Mutex:        sync.Mutex{},
+		TPO:          draughtsmantpr.CustomObject{},
+	}
+
+	var newInformer *Service
+	{
+		informerConfig := DefaultConfig()
+
+		informerConfig.BackOff = &backoff.StopBackOff{}
+		informerConfig.Eventer = &testEventer{}
+		informerConfig.Logger = microloggertest.New()
+		informerConfig.TPO = tpoController
+
+		informerConfig.Environment = environment
+		informerConfig.Projects = projects
+
+		newInformer, err = New(informerConfig)
+		if err != nil {
+			t.Fatalf("expected %#v got %#v", nil, err)
+		}
+	}
+
+	newInformer.Boot()
+
+	if tpoController.GetCalled != 1 {
+		t.Fatalf("expected %d got %d", 1, tpoController.GetCalled)
+	}
+}
+
+func Test_Informer_BackOff_MultipleRetries(t *testing.T) {
+	environment := "master"
+	projects := []string{
+		"api-name",
+		"cluster-service-name",
+		"kubernetesd-name",
+	}
+
+	var err error
+
+	tpoController := &testTPOController{
+		EnsureCalled: 0,
+		Err:          fmt.Errorf("test error"),
+		GetCalled:    0,
+		Mutex:        sync.Mutex{},
+		TPO:          draughtsmantpr.CustomObject{},
+	}
+
+	var newInformer *Service
+	{
+		informerConfig := DefaultConfig()
+
+		informerConfig.BackOff = backoff.WithMaxTries(&backoff.ZeroBackOff{}, 3)
+		informerConfig.Eventer = &testEventer{}
+		informerConfig.Logger = microloggertest.New()
+		informerConfig.TPO = tpoController
+
+		informerConfig.Environment = environment
+		informerConfig.Projects = projects
+
+		newInformer, err = New(informerConfig)
+		if err != nil {
+			t.Fatalf("expected %#v got %#v", nil, err)
+		}
+	}
+
+	newInformer.Boot()
+
+	if tpoController.GetCalled != 4 {
+		t.Fatalf("expected %d got %d", 4, tpoController.GetCalled)
+	}
+}
 
 func Test_Informer_EventManagement(t *testing.T) {
 	environment := "master"
@@ -44,6 +132,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 			TPOController: &testTPOController{
 				EnsureCalled: 0,
 				Err:          nil,
+				GetCalled:    0,
 				Mutex:        sync.Mutex{},
 				TPO:          draughtsmantpr.CustomObject{},
 			},
@@ -81,6 +170,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 			TPOController: &testTPOController{
 				EnsureCalled: 0,
 				Err:          nil,
+				GetCalled:    0,
 				Mutex:        sync.Mutex{},
 				TPO:          draughtsmantpr.CustomObject{},
 			},
@@ -124,6 +214,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 			TPOController: &testTPOController{
 				EnsureCalled: 0,
 				Err:          nil,
+				GetCalled:    0,
 				Mutex:        sync.Mutex{},
 				TPO:          draughtsmantpr.CustomObject{},
 			},
@@ -173,6 +264,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 			TPOController: &testTPOController{
 				EnsureCalled: 0,
 				Err:          nil,
+				GetCalled:    0,
 				Mutex:        sync.Mutex{},
 				TPO:          draughtsmantpr.CustomObject{},
 			},
@@ -201,6 +293,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 		{
 			informerConfig := DefaultConfig()
 
+			informerConfig.BackOff = &backoff.ZeroBackOff{}
 			informerConfig.Eventer = tc.Eventer
 			informerConfig.Logger = microloggertest.New()
 			informerConfig.TPO = tc.TPOController
@@ -254,6 +347,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 type testTPOController struct {
 	EnsureCalled int
 	Err          error
+	GetCalled    int
 	Mutex        sync.Mutex
 	TPO          draughtsmantpr.CustomObject
 }
@@ -263,10 +357,11 @@ func (c *testTPOController) Ensure(tpo draughtsmantpr.CustomObject) error {
 	c.TPO = tpo
 	c.EnsureCalled++
 	c.Mutex.Unlock()
-	return nil
+	return c.Err
 }
 
 func (c *testTPOController) Get() (draughtsmantpr.CustomObject, error) {
+	c.GetCalled++
 	return c.TPO, c.Err
 }
 

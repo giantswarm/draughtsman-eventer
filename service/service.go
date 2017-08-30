@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/cenk/backoff"
 	"github.com/giantswarm/microendpoint/service/version"
 	"github.com/giantswarm/microerror"
 	"github.com/giantswarm/micrologger"
@@ -156,10 +158,17 @@ func New(config Config) (*Service, error) {
 		}
 	}
 
+	var informerBackOff *backoff.ExponentialBackOff
+	{
+		informerBackOff = backoff.NewExponentialBackOff()
+		informerBackOff.MaxElapsedTime = 5 * time.Minute
+	}
+
 	var informerService *informer.Service
 	{
 		informerConfig := informer.DefaultConfig()
 
+		informerConfig.BackOff = informerBackOff
 		informerConfig.Eventer = eventerService
 		informerConfig.Logger = config.Logger
 		informerConfig.TPO = tpoService

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cenk/backoff"
 	"github.com/giantswarm/draughtsmantpr"
 	draughtsmantprspec "github.com/giantswarm/draughtsmantpr/spec"
 	"github.com/giantswarm/microerror"
@@ -18,6 +19,7 @@ import (
 // Config represents the configuration used to create a informer service.
 type Config struct {
 	// Dependencies.
+	BackOff backoff.BackOff
 	Eventer eventerspec.Eventer
 	Logger  micrologger.Logger
 	TPO     tpo.Controller
@@ -32,6 +34,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		// Dependencies.
+		BackOff: nil,
 		Eventer: nil,
 		Logger:  nil,
 		TPO:     nil,
@@ -44,6 +47,7 @@ func DefaultConfig() Config {
 
 type Service struct {
 	// Dependencies.
+	backOff backoff.BackOff
 	eventer eventerspec.Eventer
 	logger  micrologger.Logger
 	tpo     tpo.Controller
@@ -59,6 +63,9 @@ type Service struct {
 // New creates a new configured informer service.
 func New(config Config) (*Service, error) {
 	// Dependencies.
+	if config.BackOff == nil {
+		return nil, microerror.Maskf(invalidConfigError, "config.BackOff must not be empty")
+	}
 	if config.Eventer == nil {
 		return nil, microerror.Maskf(invalidConfigError, "config.Eventer must not be empty")
 	}
@@ -79,6 +86,7 @@ func New(config Config) (*Service, error) {
 
 	newInformer := &Service{
 		// Dependencies.
+		backOff: config.BackOff,
 		eventer: config.Eventer,
 		logger:  config.Logger,
 		tpo:     config.TPO,
@@ -96,12 +104,22 @@ func New(config Config) (*Service, error) {
 
 func (s *Service) Boot() {
 	s.bootOnce.Do(func() {
-		for {
+		o := func() error {
 			err := s.bootWithError()
 			if err != nil {
-				s.logger.Log("error", fmt.Sprintf("%#v", microerror.Mask(err)))
-				time.Sleep(time.Second)
+				return microerror.Mask(err)
 			}
+
+			return nil
+		}
+
+		n := func(err error, d time.Duration) {
+			s.logger.Log("warning", fmt.Sprintf("retrying informer boot due to error: %#v", microerror.Mask(err)))
+		}
+
+		err := backoff.RetryNotify(o, s.backOff, n)
+		if err != nil {
+			s.logger.Log("error", fmt.Sprintf("stop informer boot retries due to too many errors: %#v", microerror.Mask(err)))
 		}
 	})
 }
