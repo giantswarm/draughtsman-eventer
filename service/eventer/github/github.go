@@ -155,7 +155,7 @@ func (e *Eventer) FetchLatest(project, environment string) (eventerspec.Deployme
 	{
 		startTime := time.Now()
 
-		res, err := e.request(req)
+		res, err = e.request(req)
 		if err != nil {
 			return eventerspec.DeploymentEvent{}, microerror.Mask(err)
 		}

@@ -86,6 +86,13 @@ func New(config Config) (*Service, error) {
 }
 
 func (s *Service) Ensure(tpo draughtsmantpr.CustomObject) error {
+	if tpo.TypeMeta.APIVersion == "" {
+		tpo.TypeMeta.APIVersion = s.draughtsmanTPR.APIVersion()
+	}
+	if tpo.TypeMeta.Kind == "" {
+		tpo.TypeMeta.Kind = s.draughtsmanTPR.Kind()
+	}
+
 	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + Name
 	_, err := s.k8sClient.Core().RESTClient().Post().Body(tpo).AbsPath(endpoint).DoRaw()
 	if apierrors.IsNotFound(err) {
