@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/giantswarm/microerror"
@@ -23,7 +24,7 @@ const (
 	// DeploymentUrlFormat is the format string used to compute the Github
 	// API URL used to fetch the latest deployment event for a specific
 	// environment.
-	DeploymentUrlFormat = "https://api.github.com/repos/%s/%s/deployments?environment=%s"
+	DeploymentUrlFormat = "https://api.github.com/repos/%s/%s/deployments"
 )
 
 // request makes a request, handling any metrics and logging.
@@ -72,14 +73,20 @@ func (e *Eventer) filterDeploymentsByStatus(deployments []deployment) []deployme
 func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string, filterFinished bool) ([]deployment, error) {
 	e.logger.Log("debug", "fetching deployments", "project", project)
 
-	url := fmt.Sprintf(
-		DeploymentUrlFormat,
-		e.organisation,
-		project,
-		environment,
-	)
+	var err error
 
-	req, err := http.NewRequest("GET", url, nil)
+	var u *url.URL
+	{
+		u, err = url.Parse(fmt.Sprintf(DeploymentUrlFormat, e.organisation, project))
+		if err != nil {
+			return nil, microerror.Mask(err)
+		}
+		q := u.Query()
+		q.Set("environment", environment)
+		u.RawQuery = q.Encode()
+	}
+
+	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, microerror.Mask(err)
 	}
