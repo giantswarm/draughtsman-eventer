@@ -96,19 +96,20 @@ func (s *Service) Ensure(TPO *draughtsmantpr.CustomObject) error {
 		TPO.ObjectMeta.Name = Name
 	}
 
-	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace)
-
-	_, err := s.k8sClient.Core().RESTClient().Post().Body(TPO).AbsPath(endpoint).DoRaw()
-	if apierrors.IsNotFound(err) {
-		return microerror.Mask(notFoundError)
-	} else if apierrors.IsAlreadyExists(err) {
-		_, err := s.k8sClient.Core().RESTClient().Put().Body(TPO).AbsPath(endpoint).DoRaw()
-		if apierrors.IsNotFound(err) {
-			return microerror.Mask(notFoundError)
-		} else if err != nil {
-			return microerror.Mask(err)
+	_, err := s.Get()
+	if IsNotFound(err) {
+		endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace)
+		b, err := s.k8sClient.Core().RESTClient().Post().Body(TPO).AbsPath(endpoint).DoRaw()
+		if err != nil {
+			return microerror.Maskf(err, string(b))
 		}
 	} else if err != nil {
+		return microerror.Mask(err)
+	}
+
+	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + Name
+	_, err = s.k8sClient.Core().RESTClient().Put().Body(TPO).AbsPath(endpoint).DoRaw()
+	if err != nil {
 		return microerror.Mask(err)
 	}
 
