@@ -1,10 +1,6 @@
 package github
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"sync"
 	"time"
 
@@ -56,6 +52,7 @@ type Eventer struct {
 
 	// Internals.
 	bootOnce sync.Once
+	etagMap  map[string]string
 
 	// Settings.
 	oauthToken   string
@@ -91,6 +88,7 @@ func New(config Config) (*Eventer, error) {
 
 		// Internals.
 		bootOnce: sync.Once{},
+		etagMap:  map[string]string{},
 
 		// Settings.
 		oauthToken:   config.OAuthToken,
@@ -106,16 +104,14 @@ func (e *Eventer) FetchContinuously(projects []string, environment string) (<-ch
 
 	deploymentEventChannel := make(chan eventerspec.DeploymentEvent)
 	ticker := time.NewTicker(e.pollInterval)
+	filterFinished := true
 
 	go func() {
-		// TODO this map just grows which means we fill the programm with memory.
-		etagMap := make(map[string]string)
-
 		for {
 			select {
 			case <-ticker.C:
 				for _, p := range projects {
-					deployments, err := e.fetchNewDeploymentEvents(p, environment, etagMap)
+					deployments, err := e.fetchNewDeploymentEvents(p, environment, e.etagMap, filterFinished)
 					if err != nil {
 						e.logger.Log("error", "could not fetch deployment events", "message", err.Error())
 					}
@@ -134,69 +130,15 @@ func (e *Eventer) FetchContinuously(projects []string, environment string) (<-ch
 func (e *Eventer) FetchLatest(project, environment string) (eventerspec.DeploymentEvent, error) {
 	e.logger.Log("debug", "fetching latest deployment", "project", project)
 
-	var err error
-
-	var req *http.Request
-	{
-		u := fmt.Sprintf(
-			DeploymentUrlFormat,
-			e.organisation,
-			project,
-			environment,
-		)
-
-		req, err = http.NewRequest("GET", u, nil)
-		if err != nil {
-			return eventerspec.DeploymentEvent{}, microerror.Mask(err)
-		}
+	filterFinished := false
+	deployments, err := e.fetchNewDeploymentEvents(project, environment, e.etagMap, filterFinished)
+	if err != nil {
+		return eventerspec.DeploymentEvent{}, microerror.Mask(err)
 	}
 
-	var res *http.Response
-	{
-		startTime := time.Now()
-
-		res, err = e.request(req)
-		if err != nil {
-			return eventerspec.DeploymentEvent{}, microerror.Mask(err)
-		}
-		defer res.Body.Close()
-
-		updateDeploymentMetrics(e.organisation, project, res.StatusCode, startTime)
-
-		if res.StatusCode != http.StatusOK {
-			return eventerspec.DeploymentEvent{}, microerror.Maskf(unexpectedStatusCode, fmt.Sprintf("received non-%d status code: %d", http.StatusOK, res.StatusCode))
-		}
+	if len(deployments) == 0 {
+		return eventerspec.DeploymentEvent{}, microerror.Mask(notFoundError)
 	}
 
-	var d eventerspec.DeploymentEvent
-	{
-		bytes, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return eventerspec.DeploymentEvent{}, microerror.Mask(err)
-		}
-
-		var deployments []deployment
-		if err := json.Unmarshal(bytes, &deployments); err != nil {
-			return eventerspec.DeploymentEvent{}, microerror.Mask(err)
-		}
-
-		for i, depl := range deployments {
-			deploymentStatuses, err := e.fetchDeploymentStatus(project, depl)
-			if err != nil {
-				return eventerspec.DeploymentEvent{}, microerror.Mask(err)
-			}
-
-			deployments[i].Statuses = deploymentStatuses
-		}
-
-		deployments = e.filterDeploymentsByStatus(deployments)
-
-		if len(deployments) == 0 {
-			return eventerspec.DeploymentEvent{}, microerror.Mask(notFoundError)
-		}
-
-		d = deployments[0].DeploymentEvent(project)
-	}
-
-	return d, nil
+	return deployments[0].DeploymentEvent(project), nil
 }

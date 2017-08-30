@@ -69,7 +69,7 @@ func (e *Eventer) filterDeploymentsByStatus(deployments []deployment) []deployme
 
 // fetchNewDeploymentEvents fetches any new GitHub Deployment Events for the
 // given project.
-func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string) ([]deployment, error) {
+func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string, filterFinished bool) ([]deployment, error) {
 	e.logger.Log("debug", "fetching deployments", "project", project)
 
 	url := fmt.Sprintf(
@@ -106,7 +106,7 @@ func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap 
 
 	if resp.StatusCode == http.StatusNotModified {
 		e.logger.Log("debug", "no new deployment events, continuing", "project", project)
-		return []deployment{}, nil
+		return nil, nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -132,10 +132,13 @@ func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap 
 		deployments[index].Statuses = deploymentStatuses
 	}
 
-	deployments = e.filterDeploymentsByStatus(deployments)
+	if filterFinished {
+		e.logger.Log("debug", "filtering finished deployment events", "project", project)
+		deployments = e.filterDeploymentsByStatus(deployments)
+	}
 
 	if len(deployments) > 0 {
-		e.logger.Log("debug", "found new deployment events", "project", project)
+		e.logger.Log("debug", fmt.Sprintf("found %d new deployment events", len(deployments)), "project", project)
 	}
 
 	return deployments, nil
