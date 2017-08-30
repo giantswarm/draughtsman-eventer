@@ -31,7 +31,7 @@ func Test_Informer_BackOff_NoRetries(t *testing.T) {
 		Err:          fmt.Errorf("test error"),
 		GetCalled:    0,
 		Mutex:        sync.Mutex{},
-		TPO:          draughtsmantpr.CustomObject{},
+		TPO:          &draughtsmantpr.CustomObject{},
 	}
 
 	var newInformer *Service
@@ -74,7 +74,7 @@ func Test_Informer_BackOff_MultipleRetries(t *testing.T) {
 		Err:          fmt.Errorf("test error"),
 		GetCalled:    0,
 		Mutex:        sync.Mutex{},
-		TPO:          draughtsmantpr.CustomObject{},
+		TPO:          &draughtsmantpr.CustomObject{},
 	}
 
 	var newInformer *Service
@@ -102,6 +102,74 @@ func Test_Informer_BackOff_MultipleRetries(t *testing.T) {
 	}
 }
 
+// Test_Informer_EventManagement_NilTPO ensures the boot process does not panic
+// even if there is no TPO found or a nil TPO be used.
+func Test_Informer_EventManagement_NilTPO(t *testing.T) {
+	environment := "master"
+	projects := []string{
+		"api-name",
+		"cluster-service-name",
+		"kubernetesd-name",
+	}
+
+	var err error
+
+	tpoController := &testTPOController{
+		EnsureCalled: 0,
+		Err:          nil, // Err is nil so the informer process goes on.
+		GetCalled:    0,
+		Mutex:        sync.Mutex{},
+		TPO:          nil, // TPO is nil so the code should not panic.
+	}
+
+	var newInformer *Service
+	{
+		informerConfig := DefaultConfig()
+
+		informerConfig.BackOff = &backoff.StopBackOff{}
+		informerConfig.Eventer = &testEventer{}
+		informerConfig.Logger = microloggertest.New()
+		informerConfig.TPO = tpoController
+
+		informerConfig.Environment = environment
+		informerConfig.Projects = projects
+
+		newInformer, err = New(informerConfig)
+		if err != nil {
+			t.Fatalf("expected %#v got %#v", nil, err)
+		}
+	}
+
+	go newInformer.Boot()
+
+	expectedEnsuredCalled := 1
+
+	done := make(chan struct{}, 1)
+	go func() {
+		for {
+			tpoController.Mutex.Lock()
+			if tpoController.EnsureCalled >= expectedEnsuredCalled {
+				tpoController.Mutex.Unlock()
+				break
+			}
+			tpoController.Mutex.Unlock()
+			time.Sleep(10 * time.Millisecond)
+		}
+		close(done)
+	}()
+	wait := func() {
+		for {
+			select {
+			case <-time.After(100 * time.Millisecond):
+				t.Fatalf("timed out")
+			case <-done:
+				return
+			}
+		}
+	}
+	wait()
+}
+
 func Test_Informer_EventManagement(t *testing.T) {
 	environment := "master"
 	projects := []string{
@@ -114,7 +182,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 		Eventer               *testEventer
 		TPOController         *testTPOController
 		ExpectedEnsuredCalled int
-		ExpectedTPO           draughtsmantpr.CustomObject
+		ExpectedTPO           *draughtsmantpr.CustomObject
 	}{
 		// Test 1 makes sure the deployment event of a single project will be
 		// tracked within the TPO based on its latest deployment event.
@@ -134,10 +202,10 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Err:          nil,
 				GetCalled:    0,
 				Mutex:        sync.Mutex{},
-				TPO:          draughtsmantpr.CustomObject{},
+				TPO:          &draughtsmantpr.CustomObject{},
 			},
 			ExpectedEnsuredCalled: 1,
-			ExpectedTPO: draughtsmantpr.CustomObject{
+			ExpectedTPO: &draughtsmantpr.CustomObject{
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
@@ -172,10 +240,10 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Err:          nil,
 				GetCalled:    0,
 				Mutex:        sync.Mutex{},
-				TPO:          draughtsmantpr.CustomObject{},
+				TPO:          &draughtsmantpr.CustomObject{},
 			},
 			ExpectedEnsuredCalled: 1,
-			ExpectedTPO: draughtsmantpr.CustomObject{
+			ExpectedTPO: &draughtsmantpr.CustomObject{
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
@@ -216,10 +284,10 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Err:          nil,
 				GetCalled:    0,
 				Mutex:        sync.Mutex{},
-				TPO:          draughtsmantpr.CustomObject{},
+				TPO:          &draughtsmantpr.CustomObject{},
 			},
 			ExpectedEnsuredCalled: 2,
-			ExpectedTPO: draughtsmantpr.CustomObject{
+			ExpectedTPO: &draughtsmantpr.CustomObject{
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
@@ -266,10 +334,10 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Err:          nil,
 				GetCalled:    0,
 				Mutex:        sync.Mutex{},
-				TPO:          draughtsmantpr.CustomObject{},
+				TPO:          &draughtsmantpr.CustomObject{},
 			},
 			ExpectedEnsuredCalled: 3,
-			ExpectedTPO: draughtsmantpr.CustomObject{
+			ExpectedTPO: &draughtsmantpr.CustomObject{
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
@@ -349,18 +417,18 @@ type testTPOController struct {
 	Err          error
 	GetCalled    int
 	Mutex        sync.Mutex
-	TPO          draughtsmantpr.CustomObject
+	TPO          *draughtsmantpr.CustomObject
 }
 
-func (c *testTPOController) Ensure(tpo draughtsmantpr.CustomObject) error {
+func (c *testTPOController) Ensure(TPO *draughtsmantpr.CustomObject) error {
 	c.Mutex.Lock()
-	c.TPO = tpo
+	c.TPO = TPO
 	c.EnsureCalled++
 	c.Mutex.Unlock()
 	return c.Err
 }
 
-func (c *testTPOController) Get() (draughtsmantpr.CustomObject, error) {
+func (c *testTPOController) Get() (*draughtsmantpr.CustomObject, error) {
 	c.GetCalled++
 	return c.TPO, c.Err
 }

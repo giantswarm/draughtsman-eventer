@@ -129,7 +129,7 @@ func (s *Service) bootWithError() error {
 
 	// Get TPO to make sure it exists and to have the object which we use to
 	// further update with deployment event information.
-	var TPO draughtsmantpr.CustomObject
+	var TPO *draughtsmantpr.CustomObject
 	{
 		TPO, err = s.tpo.Get()
 		if tpo.IsNotFound(err) {
@@ -137,6 +137,11 @@ func (s *Service) bootWithError() error {
 			// Then we simply fall through here.
 		} else if err != nil {
 			return microerror.Mask(err)
+		}
+		// In case the TPO is for whatever reason nil, we initialize the structure
+		// with a new pointer to be able to setup properly below.
+		if TPO == nil {
+			TPO = &draughtsmantpr.CustomObject{}
 		}
 	}
 

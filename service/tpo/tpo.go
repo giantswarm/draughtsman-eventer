@@ -85,20 +85,24 @@ func New(config Config) (*Service, error) {
 	return eventer, nil
 }
 
-func (s *Service) Ensure(tpo draughtsmantpr.CustomObject) error {
-	if tpo.TypeMeta.APIVersion == "" {
-		tpo.TypeMeta.APIVersion = s.draughtsmanTPR.APIVersion()
+func (s *Service) Ensure(TPO *draughtsmantpr.CustomObject) error {
+	if TPO.TypeMeta.APIVersion == "" {
+		TPO.TypeMeta.APIVersion = s.draughtsmanTPR.APIVersion()
 	}
-	if tpo.TypeMeta.Kind == "" {
-		tpo.TypeMeta.Kind = s.draughtsmanTPR.Kind()
+	if TPO.TypeMeta.Kind == "" {
+		TPO.TypeMeta.Kind = s.draughtsmanTPR.Kind()
+	}
+	if TPO.ObjectMeta.Name == "" {
+		TPO.ObjectMeta.Name = Name
 	}
 
-	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + Name
-	_, err := s.k8sClient.Core().RESTClient().Post().Body(tpo).AbsPath(endpoint).DoRaw()
+	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace)
+
+	_, err := s.k8sClient.Core().RESTClient().Post().Body(TPO).AbsPath(endpoint).DoRaw()
 	if apierrors.IsNotFound(err) {
 		return microerror.Mask(notFoundError)
 	} else if apierrors.IsAlreadyExists(err) {
-		_, err := s.k8sClient.Core().RESTClient().Put().Body(tpo).AbsPath(endpoint).DoRaw()
+		_, err := s.k8sClient.Core().RESTClient().Put().Body(TPO).AbsPath(endpoint).DoRaw()
 		if apierrors.IsNotFound(err) {
 			return microerror.Mask(notFoundError)
 		} else if err != nil {
@@ -111,21 +115,21 @@ func (s *Service) Ensure(tpo draughtsmantpr.CustomObject) error {
 	return nil
 }
 
-func (s *Service) Get() (draughtsmantpr.CustomObject, error) {
+func (s *Service) Get() (*draughtsmantpr.CustomObject, error) {
 	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + Name
 
 	b, err := s.k8sClient.Core().RESTClient().Get().AbsPath(endpoint).DoRaw()
 	if apierrors.IsNotFound(err) {
-		return draughtsmantpr.CustomObject{}, microerror.Mask(notFoundError)
+		return nil, microerror.Mask(notFoundError)
 	} else if err != nil {
-		return draughtsmantpr.CustomObject{}, microerror.Mask(err)
+		return nil, microerror.Mask(err)
 	}
 
-	var tpo draughtsmantpr.CustomObject
-	err = json.Unmarshal(b, &tpo)
+	var TPO draughtsmantpr.CustomObject
+	err = json.Unmarshal(b, &TPO)
 	if err != nil {
-		return draughtsmantpr.CustomObject{}, microerror.Mask(err)
+		return nil, microerror.Mask(err)
 	}
 
-	return tpo, nil
+	return &TPO, nil
 }
