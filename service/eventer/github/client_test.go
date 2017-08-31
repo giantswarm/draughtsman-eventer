@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-// TestFilterDeploymentsByStatus tests the filterDeploymentsByStatus method.
-func TestFilterDeploymentsByStatus(t *testing.T) {
+// TestFilterDeploymentsWithoutStatuses tests the
+// filterDeploymentsWithoutStatuses method.
+func TestFilterDeploymentsWithoutStatuses(t *testing.T) {
 	tests := []struct {
 		deployments         []deployment
 		expectedDeployments []deployment
@@ -26,13 +27,7 @@ func TestFilterDeploymentsByStatus(t *testing.T) {
 					},
 				},
 			},
-			expectedDeployments: []deployment{
-				{
-					Statuses: []deploymentStatus{
-						{State: pendingState},
-					},
-				},
-			},
+			expectedDeployments: []deployment{},
 		},
 
 		// Test that a success only deployment is not kept.
@@ -84,12 +79,32 @@ func TestFilterDeploymentsByStatus(t *testing.T) {
 			},
 			expectedDeployments: []deployment{},
 		},
+
+		// Test that deployments that do not have statuses are returned.
+		{
+			deployments: []deployment{
+				{
+					Statuses: []deploymentStatus{},
+				},
+				{
+					Statuses: []deploymentStatus{},
+				},
+			},
+			expectedDeployments: []deployment{
+				{
+					Statuses: []deploymentStatus{},
+				},
+				{
+					Statuses: []deploymentStatus{},
+				},
+			},
+		},
 	}
 
 	for index, test := range tests {
 		e := Eventer{}
 
-		returnedDeployments := e.filterDeploymentsByStatus(test.deployments)
+		returnedDeployments := e.filterDeploymentsWithoutStatuses(test.deployments)
 
 		if !reflect.DeepEqual(test.expectedDeployments, returnedDeployments) {
 			t.Fatalf(

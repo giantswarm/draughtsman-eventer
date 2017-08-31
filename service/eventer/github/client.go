@@ -44,25 +44,19 @@ func (e *Eventer) request(req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
-// filterDeploymentsByStatus filters out deployments that are finished -
+// filterDeploymentsWithoutStatuses filters out deployments that are finished -
 // that is, there exists at least one status that is not pending.
-func (e *Eventer) filterDeploymentsByStatus(deployments []deployment) []deployment {
+func (e *Eventer) filterDeploymentsWithoutStatuses(deployments []deployment) []deployment {
 	matches := []deployment{}
 
 	for _, deployment := range deployments {
 		// If there are any statuses apart from pending, we consider the
 		// deployment finished, and do not act on it.
-		isPending := true
-		for _, status := range deployment.Statuses {
-			if status.State != pendingState {
-				isPending = false
-				break
-			}
+		if len(deployment.Statuses) != 0 {
+			continue
 		}
 
-		if isPending {
-			matches = append(matches, deployment)
-		}
+		matches = append(matches, deployment)
 	}
 
 	return matches
@@ -70,9 +64,7 @@ func (e *Eventer) filterDeploymentsByStatus(deployments []deployment) []deployme
 
 // fetchNewDeploymentEvents fetches any new GitHub Deployment Events for the
 // given project.
-func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string, filterFinished bool) ([]deployment, error) {
-	e.logger.Log("debug", "fetching deployments", "project", project)
-
+func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string) ([]deployment, error) {
 	var err error
 
 	var u *url.URL
@@ -112,8 +104,7 @@ func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap 
 	etagMap[project] = resp.Header.Get(etagHeader)
 
 	if resp.StatusCode == http.StatusNotModified {
-		e.logger.Log("debug", "no new deployment events, continuing", "project", project)
-		return nil, nil
+		return nil, microerror.Mask(notFoundError)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -138,14 +129,10 @@ func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap 
 
 		deployments[index].Statuses = deploymentStatuses
 	}
+	deployments = e.filterDeploymentsWithoutStatuses(deployments)
 
-	if filterFinished {
-		e.logger.Log("debug", "filtering finished deployment events", "project", project)
-		deployments = e.filterDeploymentsByStatus(deployments)
-	}
-
-	if len(deployments) > 0 {
-		e.logger.Log("debug", fmt.Sprintf("found %d new deployment events", len(deployments)), "project", project)
+	if len(deployments) == 0 {
+		return nil, microerror.Mask(notFoundError)
 	}
 
 	return deployments, nil

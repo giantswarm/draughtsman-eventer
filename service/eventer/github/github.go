@@ -104,21 +104,21 @@ func (e *Eventer) FetchContinuously(projects []string, environment string) (<-ch
 
 	deploymentEventChannel := make(chan eventerspec.DeploymentEvent)
 	ticker := time.NewTicker(e.pollInterval)
-	filterFinished := true
 
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
 				for _, p := range projects {
-					deployments, err := e.fetchNewDeploymentEvents(p, environment, e.etagMap, filterFinished)
-					if err != nil {
+					d, err := e.FetchLatest(p, environment)
+					if IsNotFound(err) {
+						continue
+					} else if err != nil {
 						e.logger.Log("error", "could not fetch deployment events", "message", err.Error())
+						continue
 					}
 
-					for _, d := range deployments {
-						deploymentEventChannel <- d.DeploymentEvent(p)
-					}
+					deploymentEventChannel <- d
 				}
 			}
 		}
@@ -130,14 +130,10 @@ func (e *Eventer) FetchContinuously(projects []string, environment string) (<-ch
 func (e *Eventer) FetchLatest(project, environment string) (eventerspec.DeploymentEvent, error) {
 	e.logger.Log("debug", "fetching latest deployment", "project", project)
 
-	filterFinished := false
-	deployments, err := e.fetchNewDeploymentEvents(project, environment, e.etagMap, filterFinished)
+	deployments, err := e.fetchNewDeploymentEvents(project, environment, e.etagMap)
 	if err != nil {
+		e.logger.Log("debug", "no new deployment events", "project", project)
 		return eventerspec.DeploymentEvent{}, microerror.Mask(err)
-	}
-
-	if len(deployments) == 0 {
-		return eventerspec.DeploymentEvent{}, microerror.Mask(notFoundError)
 	}
 
 	return deployments[0].DeploymentEvent(project), nil
