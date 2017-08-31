@@ -108,8 +108,6 @@ func Test_Informer_EventManagement_NilTPO(t *testing.T) {
 	environment := "master"
 	projects := []string{
 		"api-name",
-		"cluster-service-name",
-		"kubernetesd-name",
 	}
 
 	var err error
@@ -122,12 +120,23 @@ func Test_Informer_EventManagement_NilTPO(t *testing.T) {
 		TPO:          nil, // TPO is nil so the code should not panic.
 	}
 
+	te := &testEventer{
+		ContinuousEvents: nil,
+		LatestEvents: map[string]eventerspec.DeploymentEvent{
+			"api-name": {
+				ID:   100,
+				Name: "api-name",
+				Sha:  "api-sha-1",
+			},
+		},
+	}
+
 	var newInformer *Service
 	{
 		informerConfig := DefaultConfig()
 
 		informerConfig.BackOff = &backoff.StopBackOff{}
-		informerConfig.Eventer = &testEventer{}
+		informerConfig.Eventer = te
 		informerConfig.Logger = microloggertest.New()
 		informerConfig.TPO = tpoController
 
@@ -459,4 +468,8 @@ func (e *testEventer) FetchLatest(project, environment string) (eventerspec.Depl
 	}
 
 	return eventerspec.DeploymentEvent{}, eventer.NotFoundError
+}
+
+func (e *testEventer) SetPendingStatus(event eventerspec.DeploymentEvent) error {
+	return nil
 }

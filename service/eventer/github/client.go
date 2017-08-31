@@ -1,6 +1,7 @@
 package github
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -177,4 +178,46 @@ func (e *Eventer) fetchDeploymentStatus(project string, deployment deployment) (
 	}
 
 	return deploymentStatuses, nil
+}
+
+// postDeploymentStatus posts a Deployment Status for the given Deployment.
+func (e *Eventer) postDeploymentStatus(project string, id int, state deploymentStatusState) error {
+	e.logger.Log("debug", "posting deployment status", "project", project, "id", id, "state", state)
+
+	url := fmt.Sprintf(
+		deploymentStatusUrlFormat,
+		e.organisation,
+		project,
+		id,
+	)
+
+	status := deploymentStatus{
+		State: state,
+	}
+
+	payload, err := json.Marshal(status)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	startTime := time.Now()
+
+	resp, err := e.request(req)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+	defer resp.Body.Close()
+
+	updateDeploymentStatusMetrics("POST", e.organisation, project, resp.StatusCode, startTime)
+
+	if resp.StatusCode != http.StatusCreated {
+		return microerror.Maskf(unexpectedStatusCode, fmt.Sprintf("received non-200 status code: %v", resp.StatusCode))
+	}
+
+	return nil
 }

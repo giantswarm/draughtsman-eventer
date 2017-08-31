@@ -138,3 +138,7 @@ func (e *Eventer) FetchLatest(project, environment string) (eventerspec.Deployme
 
 	return deployments[0].DeploymentEvent(project), nil
 }
+
+func (e *Eventer) SetPendingStatus(event eventerspec.DeploymentEvent) error {
+	return e.postDeploymentStatus(event.Name, event.ID, pendingState)
+}

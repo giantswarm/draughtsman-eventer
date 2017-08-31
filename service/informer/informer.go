@@ -166,15 +166,19 @@ func (s *Service) bootWithError() error {
 			}
 
 			TPO.Spec.Projects = append(TPO.Spec.Projects, newProject)
-		}
-	}
 
-	// At this point we have the TPO computed. Now we can make sure it is created
-	// within the Kubernetes API.
-	{
-		err := s.tpo.Ensure(TPO)
-		if err != nil {
-			return microerror.Mask(err)
+			// At this point we have the TPO updated with the current project. Now we
+			// can make sure it is created within the Kubernetes API and update the
+			// deployment status accordingly.
+			err = s.tpo.Ensure(TPO)
+			if err != nil {
+				return microerror.Mask(err)
+			}
+
+			err = s.eventer.SetPendingStatus(d)
+			if err != nil {
+				return microerror.Mask(err)
+			}
 		}
 	}
 
@@ -200,6 +204,11 @@ func (s *Service) bootWithError() error {
 			TPO.Spec.Projects = ensureProject(TPO.Spec.Projects, newProject)
 
 			err = s.tpo.Ensure(TPO)
+			if err != nil {
+				return microerror.Mask(err)
+			}
+
+			err = s.eventer.SetPendingStatus(d)
 			if err != nil {
 				return microerror.Mask(err)
 			}

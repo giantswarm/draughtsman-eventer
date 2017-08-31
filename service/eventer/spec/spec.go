@@ -12,6 +12,9 @@ type Eventer interface {
 	// FetchLatest returns the latest DeploymentEvent for the given project in the
 	// given environment.
 	FetchLatest(project, environment string) (DeploymentEvent, error)
+	// SetPendingStatus updates the given DeploymentEvent's remote state to a
+	// pending state.
+	SetPendingStatus(event DeploymentEvent) error
 }
 
 // DeploymentEvent represents a request for a chart to be deployed.
