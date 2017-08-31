@@ -1,12 +1,9 @@
 package eventer
 
 import (
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/spf13/viper"
-
 	"github.com/giantswarm/microerror"
 	"github.com/giantswarm/micrologger"
+	"github.com/spf13/viper"
 
 	"github.com/giantswarm/draughtsman-eventer/flag"
 	"github.com/giantswarm/draughtsman-eventer/service/eventer/github"
@@ -19,7 +16,6 @@ import (
 type Config struct {
 	// Dependencies.
 	HTTPClient httpspec.Client
-	K8sClient  kubernetes.Interface
 	Logger     micrologger.Logger
 
 	// Settings.
@@ -33,7 +29,6 @@ func DefaultConfig() Config {
 	return Config{
 		// Dependencies.
 		HTTPClient: nil,
-		K8sClient:  nil,
 		Logger:     nil,
 
 		// Settings.

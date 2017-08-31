@@ -1,7 +1,6 @@
 package github
 
 import (
-	"sync"
 	"time"
 
 	"github.com/giantswarm/microerror"
@@ -51,8 +50,7 @@ type Eventer struct {
 	logger micrologger.Logger
 
 	// Internals.
-	bootOnce sync.Once
-	etagMap  map[string]string
+	etagMap map[string]string
 
 	// Settings.
 	oauthToken   string
@@ -87,8 +85,7 @@ func New(config Config) (*Eventer, error) {
 		logger: config.Logger,
 
 		// Internals.
-		bootOnce: sync.Once{},
-		etagMap:  map[string]string{},
+		etagMap: map[string]string{},
 
 		// Settings.
 		oauthToken:   config.OAuthToken,
