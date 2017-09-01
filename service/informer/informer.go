@@ -2,6 +2,7 @@ package informer
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -161,7 +162,8 @@ func (s *Service) bootWithError() error {
 			}
 
 			newProject := draughtsmantprspec.Project{
-				Name: p,
+				ID:   strconv.Itoa(d.ID),
+				Name: d.Name,
 				Ref:  d.Sha,
 			}
 
@@ -197,6 +199,7 @@ func (s *Service) bootWithError() error {
 			}
 
 			newProject := draughtsmantprspec.Project{
+				ID:   strconv.Itoa(d.ID),
 				Name: d.Name,
 				Ref:  d.Sha,
 			}
@@ -231,12 +234,13 @@ func containsEmptyItems(projects []string) bool {
 func ensureProject(projects []draughtsmantprspec.Project, project draughtsmantprspec.Project) []draughtsmantprspec.Project {
 	var updated bool
 	for i, p := range projects {
-		if p.Name != project.Name {
+		if p.Name != project.Name && p.ID != project.ID {
 			continue
 		}
 
-		projects[i].Ref = project.Ref
+		projects[i] = project
 		updated = true
+		break
 	}
 
 	if updated {

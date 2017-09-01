@@ -218,6 +218,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
+							ID:   "100",
 							Name: "api-name",
 							Ref:  "api-sha-1",
 						},
@@ -256,10 +257,12 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
+							ID:   "100",
 							Name: "api-name",
 							Ref:  "api-sha-1",
 						},
 						{
+							ID:   "101",
 							Name: "cluster-service-name",
 							Ref:  "cluster-service-sha-1",
 						},
@@ -300,6 +303,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
+							ID:   "101",
 							Name: "api-name",
 							Ref:  "api-sha-2",
 						},
@@ -350,10 +354,12 @@ func Test_Informer_EventManagement(t *testing.T) {
 				Spec: draughtsmantpr.Spec{
 					Projects: []draughtsmantprspec.Project{
 						{
+							ID:   "101",
 							Name: "api-name",
 							Ref:  "api-sha-2",
 						},
 						{
+							ID:   "103",
 							Name: "cluster-service-name",
 							Ref:  "cluster-service-sha-2",
 						},
