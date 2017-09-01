@@ -166,7 +166,11 @@ func (s *Service) bootWithError() error {
 			Ref:  d.Sha,
 		}
 
-		TPO.Spec.Projects = ensureProject(TPO.Spec.Projects, newProject)
+		var updated bool
+		TPO.Spec.Projects, updated = ensureProject(TPO.Spec.Projects, newProject)
+		if !updated {
+			continue
+		}
 
 		// At this point we have the TPO updated with the current project. Now we
 		// can make sure it is created within the Kubernetes API and update the
@@ -202,7 +206,11 @@ func (s *Service) bootWithError() error {
 				Ref:  d.Sha,
 			}
 
-			TPO.Spec.Projects = ensureProject(TPO.Spec.Projects, newProject)
+			var updated bool
+			TPO.Spec.Projects, updated = ensureProject(TPO.Spec.Projects, newProject)
+			if !updated {
+				continue
+			}
 
 			err = s.tpo.Ensure(TPO)
 			if err != nil {
@@ -229,25 +237,29 @@ func containsEmptyItems(projects []string) bool {
 	return false
 }
 
-func ensureProject(projects []draughtsmantprspec.Project, project draughtsmantprspec.Project) []draughtsmantprspec.Project {
+// ensureProject takes care of updating the given projects list with the given
+// project. In case the project cannot be found in the list, it is added. In
+// case the project is found in the list, it is updated, if it changed. In case
+// the list got updated somehow the returned boolean is true.
+func ensureProject(projects []draughtsmantprspec.Project, project draughtsmantprspec.Project) ([]draughtsmantprspec.Project, bool) {
 	if project.ID == "" || project.Name == "" || project.Ref == "" {
-		return projects
+		return projects, false
 	}
 
 	_, err := getProjectByName(projects, project.Name)
 	if IsNotFound(err) {
 		projects = append(projects, project)
-		return projects
+		return projects, true
 	}
 
 	for i, p := range projects {
-		if p.Name == project.Name {
+		if p.Name == project.Name && p.Ref != project.Ref {
 			projects[i] = project
-			break
+			return projects, true
 		}
 	}
 
-	return projects
+	return projects, false
 }
 
 func getProjectByName(projects []draughtsmantprspec.Project, name string) (draughtsmantprspec.Project, error) {

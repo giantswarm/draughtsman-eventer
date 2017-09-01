@@ -432,14 +432,17 @@ func Test_Informer_ensureProject(t *testing.T) {
 		Projects         []draughtsmantprspec.Project
 		Project          draughtsmantprspec.Project
 		ExpectedProjects []draughtsmantprspec.Project
+		ExpectedUpdated  bool
 	}{
-		//
+		// Test 1
 		{
 			Projects:         []draughtsmantprspec.Project{},
 			Project:          draughtsmantprspec.Project{},
 			ExpectedProjects: []draughtsmantprspec.Project{},
+			ExpectedUpdated:  false,
 		},
 
+		// Test 2
 		{
 			Projects: []draughtsmantprspec.Project{
 				{
@@ -460,8 +463,10 @@ func Test_Informer_ensureProject(t *testing.T) {
 					Ref:  "api-sha-1",
 				},
 			},
+			ExpectedUpdated: false,
 		},
 
+		// Test 3
 		{
 			Projects: []draughtsmantprspec.Project{
 				{
@@ -482,8 +487,10 @@ func Test_Informer_ensureProject(t *testing.T) {
 					Ref:  "api-sha-2",
 				},
 			},
+			ExpectedUpdated: true,
 		},
 
+		// Test 4
 		{
 			Projects: []draughtsmantprspec.Project{
 				{
@@ -514,13 +521,17 @@ func Test_Informer_ensureProject(t *testing.T) {
 					Ref:  "cluster-service-sha-1",
 				},
 			},
+			ExpectedUpdated: true,
 		},
 	}
 
 	for i, tc := range testCases {
-		projects := ensureProject(tc.Projects, tc.Project)
+		projects, updated := ensureProject(tc.Projects, tc.Project)
 		if !reflect.DeepEqual(projects, tc.ExpectedProjects) {
 			t.Fatalf("test %d expected %#v got %#v", i+1, tc.ExpectedProjects, projects)
+		}
+		if updated != tc.ExpectedUpdated {
+			t.Fatalf("test %d expected %#v got %#v", i+1, tc.ExpectedUpdated, updated)
 		}
 	}
 }
