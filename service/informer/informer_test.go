@@ -427,6 +427,104 @@ func Test_Informer_EventManagement(t *testing.T) {
 	}
 }
 
+func Test_Informer_ensureProject(t *testing.T) {
+	testCases := []struct {
+		Projects         []draughtsmantprspec.Project
+		Project          draughtsmantprspec.Project
+		ExpectedProjects []draughtsmantprspec.Project
+	}{
+		//
+		{
+			Projects:         []draughtsmantprspec.Project{},
+			Project:          draughtsmantprspec.Project{},
+			ExpectedProjects: []draughtsmantprspec.Project{},
+		},
+
+		{
+			Projects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-1",
+					Name: "api-name",
+					Ref:  "api-sha-1",
+				},
+			},
+			Project: draughtsmantprspec.Project{
+				ID:   "api-id-1",
+				Name: "api-name",
+				Ref:  "api-sha-1",
+			},
+			ExpectedProjects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-1",
+					Name: "api-name",
+					Ref:  "api-sha-1",
+				},
+			},
+		},
+
+		{
+			Projects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-1",
+					Name: "api-name",
+					Ref:  "api-sha-1",
+				},
+			},
+			Project: draughtsmantprspec.Project{
+				ID:   "api-id-2",
+				Name: "api-name",
+				Ref:  "api-sha-2",
+			},
+			ExpectedProjects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-2",
+					Name: "api-name",
+					Ref:  "api-sha-2",
+				},
+			},
+		},
+
+		{
+			Projects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-1",
+					Name: "api-name",
+					Ref:  "api-sha-1",
+				},
+				{
+					ID:   "cluster-service-id-1",
+					Name: "cluster-service-name",
+					Ref:  "cluster-service-sha-1",
+				},
+			},
+			Project: draughtsmantprspec.Project{
+				ID:   "api-id-2",
+				Name: "api-name",
+				Ref:  "api-sha-2",
+			},
+			ExpectedProjects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-2",
+					Name: "api-name",
+					Ref:  "api-sha-2",
+				},
+				{
+					ID:   "cluster-service-id-1",
+					Name: "cluster-service-name",
+					Ref:  "cluster-service-sha-1",
+				},
+			},
+		},
+	}
+
+	for i, tc := range testCases {
+		projects := ensureProject(tc.Projects, tc.Project)
+		if !reflect.DeepEqual(projects, tc.ExpectedProjects) {
+			t.Fatalf("test %d expected %#v got %#v", i+1, tc.ExpectedProjects, projects)
+		}
+	}
+}
+
 type testTPOController struct {
 	EnsureCalled int
 	Err          error

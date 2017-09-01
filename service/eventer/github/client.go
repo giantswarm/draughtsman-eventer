@@ -65,7 +65,7 @@ func (e *Eventer) filterDeploymentsWithoutStatuses(deployments []deployment) []d
 
 // fetchNewDeploymentEvents fetches any new GitHub Deployment Events for the
 // given project.
-func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string) ([]deployment, error) {
+func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap map[string]string, filterStatuses bool) ([]deployment, error) {
 	var err error
 
 	var u *url.URL
@@ -130,7 +130,10 @@ func (e *Eventer) fetchNewDeploymentEvents(project, environment string, etagMap 
 
 		deployments[index].Statuses = deploymentStatuses
 	}
-	deployments = e.filterDeploymentsWithoutStatuses(deployments)
+
+	if filterStatuses {
+		deployments = e.filterDeploymentsWithoutStatuses(deployments)
+	}
 
 	if len(deployments) == 0 {
 		return nil, microerror.Mask(notFoundError)

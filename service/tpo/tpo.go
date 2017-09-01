@@ -98,14 +98,22 @@ func (s *Service) Ensure(TPO *draughtsmantpr.CustomObject) error {
 
 	_, err := s.Get()
 	if IsNotFound(err) {
+		s.logger.Log("debug", "creating TPO")
+
 		endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace)
 		b, err := s.k8sClient.Core().RESTClient().Post().Body(TPO).AbsPath(endpoint).DoRaw()
 		if err != nil {
 			return microerror.Maskf(err, string(b))
 		}
+
+		return nil
 	} else if err != nil {
 		return microerror.Mask(err)
 	}
+
+	s.logger.Log("debug", "updating TPO")
+
+	TPO.ObjectMeta.ResourceVersion = ""
 
 	endpoint := s.draughtsmanTPR.Endpoint(DefaultNamespace) + "/" + Name
 	_, err = s.k8sClient.Core().RESTClient().Put().Body(TPO).AbsPath(endpoint).DoRaw()

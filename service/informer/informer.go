@@ -148,39 +148,37 @@ func (s *Service) bootWithError() error {
 
 	// If the TPO was not found the project list is empty, which means we
 	// initialize it.
-	if len(TPO.Spec.Projects) == 0 {
-		for _, p := range s.projects {
-			d, err := s.eventer.FetchLatest(p, s.environment)
-			if eventer.IsNotFound(err) {
-				// The current project cannot be deployed at the moment because there is
-				// no deployment event yet. Thus we cannot bootstrap initially. This
-				// will get fixed later as soon as there is a deployment event. Then the
-				// eventer updates the TPO and the operator can do the magic.
-				continue
-			} else if err != nil {
-				return microerror.Mask(err)
-			}
+	for _, p := range s.projects {
+		d, err := s.eventer.FetchLatest(p, s.environment)
+		if eventer.IsNotFound(err) {
+			// The current project cannot be deployed at the moment because there is
+			// no deployment event yet. Thus we cannot bootstrap initially. This
+			// will get fixed later as soon as there is a deployment event. Then the
+			// eventer updates the TPO and the operator can do the magic.
+			continue
+		} else if err != nil {
+			return microerror.Mask(err)
+		}
 
-			newProject := draughtsmantprspec.Project{
-				ID:   strconv.Itoa(d.ID),
-				Name: d.Name,
-				Ref:  d.Sha,
-			}
+		newProject := draughtsmantprspec.Project{
+			ID:   strconv.Itoa(d.ID),
+			Name: d.Name,
+			Ref:  d.Sha,
+		}
 
-			TPO.Spec.Projects = append(TPO.Spec.Projects, newProject)
+		TPO.Spec.Projects = ensureProject(TPO.Spec.Projects, newProject)
 
-			// At this point we have the TPO updated with the current project. Now we
-			// can make sure it is created within the Kubernetes API and update the
-			// deployment status accordingly.
-			err = s.tpo.Ensure(TPO)
-			if err != nil {
-				return microerror.Mask(err)
-			}
+		// At this point we have the TPO updated with the current project. Now we
+		// can make sure it is created within the Kubernetes API and update the
+		// deployment status accordingly.
+		err = s.tpo.Ensure(TPO)
+		if err != nil {
+			return microerror.Mask(err)
+		}
 
-			err = s.eventer.SetPendingStatus(d)
-			if err != nil {
-				return microerror.Mask(err)
-			}
+		err = s.eventer.SetPendingStatus(d)
+		if err != nil {
+			return microerror.Mask(err)
 		}
 	}
 
@@ -232,22 +230,32 @@ func containsEmptyItems(projects []string) bool {
 }
 
 func ensureProject(projects []draughtsmantprspec.Project, project draughtsmantprspec.Project) []draughtsmantprspec.Project {
-	var updated bool
-	for i, p := range projects {
-		if p.Name != project.Name && p.ID != project.ID {
-			continue
-		}
-
-		projects[i] = project
-		updated = true
-		break
-	}
-
-	if updated {
+	if project.ID == "" || project.Name == "" || project.Ref == "" {
 		return projects
 	}
 
-	projects = append(projects, project)
+	_, err := getProjectByName(projects, project.Name)
+	if IsNotFound(err) {
+		projects = append(projects, project)
+		return projects
+	}
+
+	for i, p := range projects {
+		if p.Name == project.Name {
+			projects[i] = project
+			break
+		}
+	}
 
 	return projects
+}
+
+func getProjectByName(projects []draughtsmantprspec.Project, name string) (draughtsmantprspec.Project, error) {
+	for _, p := range projects {
+		if p.Name == name {
+			return p, nil
+		}
+	}
+
+	return draughtsmantprspec.Project{}, microerror.Maskf(notFoundError, "project with name '%s'", name)
 }

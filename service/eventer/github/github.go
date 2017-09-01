@@ -107,11 +107,8 @@ func (e *Eventer) FetchContinuously(projects []string, environment string) (<-ch
 			select {
 			case <-ticker.C:
 				for _, p := range projects {
-					d, err := e.FetchLatest(p, environment)
-					if IsNotFound(err) {
-						continue
-					} else if err != nil {
-						e.logger.Log("error", "could not fetch deployment events", "message", err.Error())
+					d, err := e.fetchLatest(p, environment, true)
+					if err != nil {
 						continue
 					}
 
@@ -125,17 +122,29 @@ func (e *Eventer) FetchContinuously(projects []string, environment string) (<-ch
 }
 
 func (e *Eventer) FetchLatest(project, environment string) (eventerspec.DeploymentEvent, error) {
-	e.logger.Log("debug", "fetching latest deployment", "project", project)
-
-	deployments, err := e.fetchNewDeploymentEvents(project, environment, e.etagMap)
+	d, err := e.fetchLatest(project, environment, false)
 	if err != nil {
-		e.logger.Log("debug", "no new deployment events", "project", project)
 		return eventerspec.DeploymentEvent{}, microerror.Mask(err)
 	}
 
-	return deployments[0].DeploymentEvent(project), nil
+	return d, nil
 }
 
 func (e *Eventer) SetPendingStatus(event eventerspec.DeploymentEvent) error {
 	return e.postDeploymentStatus(event.Name, event.ID, pendingState)
+}
+
+func (e *Eventer) fetchLatest(project, environment string, filterStatuses bool) (eventerspec.DeploymentEvent, error) {
+	e.logger.Log("debug", "fetching latest deployment", "project", project)
+
+	deployments, err := e.fetchNewDeploymentEvents(project, environment, e.etagMap, filterStatuses)
+	if IsNotFound(err) {
+		e.logger.Log("debug", "no new deployment events", "project", project)
+		return eventerspec.DeploymentEvent{}, microerror.Mask(err)
+	} else if err != nil {
+		e.logger.Log("error", "could not fetch deployment events", "message", err.Error())
+		return eventerspec.DeploymentEvent{}, microerror.Mask(err)
+	}
+
+	return deployments[0].DeploymentEvent(project), nil
 }
