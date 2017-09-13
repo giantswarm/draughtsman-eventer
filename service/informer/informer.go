@@ -149,7 +149,7 @@ func (s *Service) bootWithError() error {
 	// If the TPO was not found the project list is empty, which means we
 	// initialize it.
 	for _, p := range s.projects {
-		d, err := s.eventer.FetchLatest(p, s.environment)
+		e, err := s.eventer.FetchLatest(p, s.environment)
 		if eventer.IsNotFound(err) {
 			// The current project cannot be deployed at the moment because there is
 			// no deployment event yet. Thus we cannot bootstrap initially. This
@@ -160,27 +160,7 @@ func (s *Service) bootWithError() error {
 			return microerror.Mask(err)
 		}
 
-		newProject := draughtsmantprspec.Project{
-			ID:   strconv.Itoa(d.ID),
-			Name: d.Name,
-			Ref:  d.Sha,
-		}
-
-		var updated bool
-		TPO.Spec.Projects, updated = ensureProject(TPO.Spec.Projects, newProject)
-		if !updated {
-			continue
-		}
-
-		// At this point we have the TPO updated with the current project. Now we
-		// can make sure it is created within the Kubernetes API and update the
-		// deployment status accordingly.
-		err = s.tpo.Ensure(TPO)
-		if err != nil {
-			return microerror.Mask(err)
-		}
-
-		err = s.eventer.SetPendingStatus(d)
+		err = s.alignEventWithObject(e, TPO)
 		if err != nil {
 			return microerror.Mask(err)
 		}
@@ -194,34 +174,44 @@ func (s *Service) bootWithError() error {
 			return microerror.Mask(err)
 		}
 
-		for d := range deploymentEventChannel {
+		for e := range deploymentEventChannel {
 			TPO, err := s.tpo.Get()
 			if err != nil {
 				return microerror.Mask(err)
 			}
 
-			newProject := draughtsmantprspec.Project{
-				ID:   strconv.Itoa(d.ID),
-				Name: d.Name,
-				Ref:  d.Sha,
-			}
-
-			var updated bool
-			TPO.Spec.Projects, updated = ensureProject(TPO.Spec.Projects, newProject)
-			if !updated {
-				continue
-			}
-
-			err = s.tpo.Ensure(TPO)
-			if err != nil {
-				return microerror.Mask(err)
-			}
-
-			err = s.eventer.SetPendingStatus(d)
+			err = s.alignEventWithObject(e, TPO)
 			if err != nil {
 				return microerror.Mask(err)
 			}
 		}
+	}
+
+	return nil
+}
+
+func (s *Service) alignEventWithObject(e eventerspec.DeploymentEvent, TPO *draughtsmantpr.CustomObject) error {
+	newProject := draughtsmantprspec.Project{
+		ID:   strconv.Itoa(e.ID),
+		Name: e.Name,
+		Ref:  e.Sha,
+	}
+
+	var updated bool
+	TPO.Spec.Projects, updated = ensureProject(TPO.Spec.Projects, newProject)
+	if !updated {
+		return nil
+	}
+	s.logger.Log("debug", "found new deployment", "project", newProject.Name)
+
+	err := s.tpo.Ensure(TPO)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	err = s.eventer.SetPendingStatus(e)
+	if err != nil {
+		return microerror.Mask(err)
 	}
 
 	return nil
@@ -253,7 +243,7 @@ func ensureProject(projects []draughtsmantprspec.Project, project draughtsmantpr
 	}
 
 	for i, p := range projects {
-		if p.Name == project.Name && p.Ref != project.Ref {
+		if p.Name == project.Name && p.ID != project.ID {
 			projects[i] = project
 			return projects, true
 		}

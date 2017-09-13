@@ -434,7 +434,7 @@ func Test_Informer_ensureProject(t *testing.T) {
 		ExpectedProjects []draughtsmantprspec.Project
 		ExpectedUpdated  bool
 	}{
-		// Test 1
+		// Test 1 ensures that zero value input results in zero value output.
 		{
 			Projects:         []draughtsmantprspec.Project{},
 			Project:          draughtsmantprspec.Project{},
@@ -442,7 +442,8 @@ func Test_Informer_ensureProject(t *testing.T) {
 			ExpectedUpdated:  false,
 		},
 
-		// Test 2
+		// Test 2 ensures that the very same deployment event does not cause an
+		// update.
 		{
 			Projects: []draughtsmantprspec.Project{
 				{
@@ -466,7 +467,7 @@ func Test_Informer_ensureProject(t *testing.T) {
 			ExpectedUpdated: false,
 		},
 
-		// Test 3
+		// Test 3 ensures that a different ref causes a deployment update.
 		{
 			Projects: []draughtsmantprspec.Project{
 				{
@@ -490,7 +491,8 @@ func Test_Informer_ensureProject(t *testing.T) {
 			ExpectedUpdated: true,
 		},
 
-		// Test 4
+		// Test 4 ensures that a different ref causes a deployment update of the
+		// right project.
 		{
 			Projects: []draughtsmantprspec.Project{
 				{
@@ -519,6 +521,31 @@ func Test_Informer_ensureProject(t *testing.T) {
 					ID:   "cluster-service-id-1",
 					Name: "cluster-service-name",
 					Ref:  "cluster-service-sha-1",
+				},
+			},
+			ExpectedUpdated: true,
+		},
+
+		// Test 5 ensures that the same ref causes an update in case the deployment
+		// event ID is different.
+		{
+			Projects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-1",
+					Name: "api-name",
+					Ref:  "api-sha-1",
+				},
+			},
+			Project: draughtsmantprspec.Project{
+				ID:   "api-id-2",
+				Name: "api-name",
+				Ref:  "api-sha-1",
+			},
+			ExpectedProjects: []draughtsmantprspec.Project{
+				{
+					ID:   "api-id-2",
+					Name: "api-name",
+					Ref:  "api-sha-1",
 				},
 			},
 			ExpectedUpdated: true,
