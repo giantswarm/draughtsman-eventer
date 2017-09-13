@@ -5,6 +5,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -169,6 +170,7 @@ func New(config Config) (*Service, error) {
 
 		informerConfig.BackOff = informerBackOff
 		informerConfig.Eventer = eventerService
+		informerConfig.ExitFunc = os.Exit
 		informerConfig.Logger = config.Logger
 		informerConfig.TPO = tpoService
 

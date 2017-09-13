@@ -40,6 +40,7 @@ func Test_Informer_BackOff_NoRetries(t *testing.T) {
 
 		informerConfig.BackOff = &backoff.StopBackOff{}
 		informerConfig.Eventer = &testEventer{}
+		informerConfig.ExitFunc = func(code int) {}
 		informerConfig.Logger = microloggertest.New()
 		informerConfig.TPO = tpoController
 
@@ -83,6 +84,7 @@ func Test_Informer_BackOff_MultipleRetries(t *testing.T) {
 
 		informerConfig.BackOff = backoff.WithMaxTries(&backoff.ZeroBackOff{}, 3)
 		informerConfig.Eventer = &testEventer{}
+		informerConfig.ExitFunc = func(code int) {}
 		informerConfig.Logger = microloggertest.New()
 		informerConfig.TPO = tpoController
 
@@ -137,6 +139,7 @@ func Test_Informer_EventManagement_NilTPO(t *testing.T) {
 
 		informerConfig.BackOff = &backoff.StopBackOff{}
 		informerConfig.Eventer = te
+		informerConfig.ExitFunc = func(code int) {}
 		informerConfig.Logger = microloggertest.New()
 		informerConfig.TPO = tpoController
 
@@ -378,6 +381,7 @@ func Test_Informer_EventManagement(t *testing.T) {
 
 			informerConfig.BackOff = &backoff.ZeroBackOff{}
 			informerConfig.Eventer = tc.Eventer
+			informerConfig.ExitFunc = func(code int) {}
 			informerConfig.Logger = microloggertest.New()
 			informerConfig.TPO = tc.TPOController
 

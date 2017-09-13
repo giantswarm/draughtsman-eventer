@@ -20,10 +20,11 @@ import (
 // Config represents the configuration used to create a informer service.
 type Config struct {
 	// Dependencies.
-	BackOff backoff.BackOff
-	Eventer eventerspec.Eventer
-	Logger  micrologger.Logger
-	TPO     tpo.Controller
+	BackOff  backoff.BackOff
+	Eventer  eventerspec.Eventer
+	ExitFunc func(code int)
+	Logger   micrologger.Logger
+	TPO      tpo.Controller
 
 	// Settings.
 	Environment string
@@ -35,10 +36,11 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		// Dependencies.
-		BackOff: nil,
-		Eventer: nil,
-		Logger:  nil,
-		TPO:     nil,
+		BackOff:  nil,
+		Eventer:  nil,
+		ExitFunc: nil,
+		Logger:   nil,
+		TPO:      nil,
 
 		// Settings.
 		Environment: "",
@@ -48,10 +50,11 @@ func DefaultConfig() Config {
 
 type Service struct {
 	// Dependencies.
-	backOff backoff.BackOff
-	eventer eventerspec.Eventer
-	logger  micrologger.Logger
-	tpo     tpo.Controller
+	backOff  backoff.BackOff
+	eventer  eventerspec.Eventer
+	exitFunc func(code int)
+	logger   micrologger.Logger
+	tpo      tpo.Controller
 
 	// Internals.
 	bootOnce sync.Once
@@ -70,6 +73,9 @@ func New(config Config) (*Service, error) {
 	if config.Eventer == nil {
 		return nil, microerror.Maskf(invalidConfigError, "config.Eventer must not be empty")
 	}
+	if config.ExitFunc == nil {
+		return nil, microerror.Maskf(invalidConfigError, "config.ExitFunc must not be empty")
+	}
 	if config.Logger == nil {
 		return nil, microerror.Maskf(invalidConfigError, "config.Logger must not be empty")
 	}
@@ -77,7 +83,7 @@ func New(config Config) (*Service, error) {
 		return nil, microerror.Maskf(invalidConfigError, "config.TPO must not be empty")
 	}
 
-	// Dependencies.
+	// Settings.
 	if config.Environment == "" {
 		return nil, microerror.Maskf(invalidConfigError, "config.Environment must not be empty")
 	}
@@ -87,10 +93,11 @@ func New(config Config) (*Service, error) {
 
 	newInformer := &Service{
 		// Dependencies.
-		backOff: config.BackOff,
-		eventer: config.Eventer,
-		logger:  config.Logger,
-		tpo:     config.TPO,
+		backOff:  config.BackOff,
+		eventer:  config.Eventer,
+		exitFunc: config.ExitFunc,
+		logger:   config.Logger,
+		tpo:      config.TPO,
 
 		// Internals
 		bootOnce: sync.Once{},
@@ -121,6 +128,7 @@ func (s *Service) Boot() {
 		err := backoff.RetryNotify(o, s.backOff, n)
 		if err != nil {
 			s.logger.Log("error", fmt.Sprintf("stop informer boot retries due to too many errors: %#v", microerror.Mask(err)))
+			s.exitFunc(1)
 		}
 	})
 }
