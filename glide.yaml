@@ -15,4 +15,4 @@ import:
 - package: github.com/prometheus/client_golang
   version: ~0.8.0
 - package: github.com/giantswarm/microstorage
-  version: f5c68d40459f0021cf8266501b7d8615ea4ff641
+  version: master
